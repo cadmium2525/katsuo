@@ -578,7 +578,7 @@ const NOTICES = [
 
 // 敵のインフレ
 // 15分以降はさらに急加速して、いつかは必ず呑まれる
-const hpMul = t => (1 + t / 120) * Math.pow(1.11, t / 60) * (1 + Math.pow(Math.max(0, t - 720) / 600, 2));
+const hpMul = t => (1 + t / 240) * Math.pow(1.11, t / 60) * (1 + Math.pow(Math.max(0, t - 720) / 500, 2));
 const eDmgMul = t => 1 + t / 300;
 const eSpdMul = t => 1 + Math.min(0.35, t / 1800);
 const xpNeed = L => Math.floor(4 + L * 5.5 + L * L * 0.42);
@@ -598,7 +598,7 @@ function computeStats() {
     speed: 5.4 * (1 + 0.08 * g('zori')),
     maxHp: 100 + 20 * g('dha'),
     regen: 0.4 * g('ocha'),
-    magnet: 2.3 * (1 + 0.35 * g('ami')),
+    magnet: 2.8 * (1 + 0.35 * g('ami')),
     xpMul: 1 + 0.12 * g('tairyo'),
     cdMul: 1 - 0.07 * g('hachimaki'),
     armor: g('maekake'),
@@ -770,7 +770,7 @@ function strongestType(t) {
 
 function director(dt) {
   const t = G.time;
-  let rate = Math.min(50, 0.9 + t * 0.026 + Math.pow(t / 240, 2) * 1.6);
+  let rate = Math.min(50, 0.6 + t * 0.012 + Math.pow(t / 200, 2) * 1.6);
   if (G.boss) rate *= 0.6;
   G.spawnAcc += rate * dt;
   while (G.spawnAcc >= 1) {
