@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>カツオのたたきサバイバー</title>
+<meta name="description" content="やたらリアルな鰹で迫り来る鯖をぶっ叩け！生存時間を競う2.5Dサバイバーゲーム。">
+<meta property="og:title" content="カツオのたたきサバイバー">
+<meta property="og:description" content="やたらリアルな鰹で迫り来る鯖をぶっ叩け！生存時間を競う2.5Dサバイバーゲーム。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a1626">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./js/vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+  <canvas id="fx"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="xpbar"><div id="xpfill"></div><span id="lvtext">Lv 1</span></div>
+    <div id="topline">
+      <div id="weapons"></div>
+      <div id="timer">00:00</div>
+      <div id="kills">🐟 0</div>
+    </div>
+    <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar"><div id="bossfill"></div></div></div>
+    <div id="hudBtns">
+      <button class="muteBtn" aria-label="サウンド切替">🔊</button>
+      <button id="pauseBtn" aria-label="一時停止">⏸</button>
+    </div>
+    <div id="banner"></div>
+  </div>
+  <div id="joy" class="hidden"><div id="joyKnob"></div></div>
+
+  <div id="loading" class="screen"><div class="spinner">🐟</div><p>鰹を水揚げ中…</p></div>
+
+  <div id="title" class="screen hidden">
+    <div class="titleWrap">
+      <div class="sub">やたらリアルな鰹で鯖をぶっ叩け！</div>
+      <h1><span class="t1">カツオの</span><span class="t2">たたき</span><span class="t3">サバイバー</span></h1>
+    </div>
+    <div class="titleBottom">
+      <button id="startBtn" class="big">出航する</button>
+      <div id="best"></div>
+      <div class="howto">
+        <span class="pc">移動：WASD / 矢印キー　一時停止：Esc　音：M</span>
+        <span class="sp">画面をドラッグして移動</span>
+        <br>攻撃は自動。迫る鯖を叩き、経験値（鱗）を集めて強くなれ。
+      </div>
+      <button class="muteBtn small" aria-label="サウンド切替">🔊</button>
+    </div>
+  </div>
+
+  <div id="levelup" class="screen modal hidden">
+    <div class="panel">
+      <h2>レベルアップ！ <small>Lv <span id="lvnum">2</span></small></h2>
+      <div id="cards"></div>
+    </div>
+  </div>
+
+  <div id="chest" class="screen modal hidden">
+    <div class="panel">
+      <h2 id="chesttitle">宝箱を手に入れた！</h2>
+      <div id="chestlist"></div>
+      <button id="chestOk" class="big">受け取る</button>
+    </div>
+  </div>
+
+  <div id="pause" class="screen modal hidden">
+    <div class="panel">
+      <h2>一時停止</h2>
+      <div id="pausestats"></div>
+      <div class="row">
+        <button id="resumeBtn" class="big">再開</button>
+        <button id="quitBtn" class="ghost">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameover" class="screen modal hidden">
+    <div class="panel">
+      <h2 class="goH">鯖に呑まれた…</h2>
+      <div class="goLabel">生存時間</div>
+      <div id="goTime">00:00</div>
+      <div id="goRank"></div>
+      <div id="goStats"></div>
+      <div id="goBest"></div>
+      <div class="row">
+        <button id="retryBtn" class="big">もう一度</button>
+        <a id="shareBtn" class="ghost" target="_blank" rel="noopener">𝕏 でシェア</a>
+      </div>
+      <button id="titleBtn" class="ghost small">タイトルへ</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
