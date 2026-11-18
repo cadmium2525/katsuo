@@ -1119,6 +1119,9 @@ function updateTataki(dt) {
   const size = st.size * S.area;
   katsuo.scale.setScalar(size);
   const reach = (GRIP_OFF + 0.97 * KATSUO_LEN) * size + 0.25;
+  // 鰹の先端（と腹の厚み）が地面に埋まらない最大の下向き角度
+  const tipLen = (GRIP_OFF + 0.97 * KATSUO_LEN) * size;
+  const pitchMax = Math.asin(clamp((1.3 - 0.4 * size) / tipLen, -1, 1));
   if (!TK.swinging) {
     TK.cd -= dt;
     if (TK.cd <= 0) {
@@ -1154,11 +1157,11 @@ function updateTataki(dt) {
         TK.cd = st.cd * S.cdMul;
       }
     }
-    TK.pitch += (0.1 - TK.pitch) * Math.min(1, dt * 30);
+    TK.pitch += (Math.min(0.1, pitchMax) - TK.pitch) * Math.min(1, dt * 30);
   } else {
     const rest = P.facing - 0.75;
     TK.yaw += angDiff(TK.yaw, rest) * Math.min(1, dt * 6);
-    TK.pitch += (1.05 - TK.pitch) * Math.min(1, dt * 6);
+    TK.pitch += (Math.min(1.05, pitchMax) - TK.pitch) * Math.min(1, dt * 6);
   }
 }
 function sweep(a0, a1, reach, st) {
