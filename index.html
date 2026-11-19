@@ -21,21 +21,35 @@
 <div id="app">
   <canvas id="game"></canvas>
   <canvas id="fx"></canvas>
+  <div id="flash"></div>
+  <div id="vignette"></div>
 
   <div id="hud" class="hidden">
     <div id="xpbar"><div id="xpfill"></div><span id="lvtext">Lv 1</span></div>
     <div id="topline">
       <div id="weapons"></div>
-      <div id="timer">00:00</div>
-      <div id="kills">🐟 0</div>
+      <div id="timerWrap"><div id="timer">00:00</div><div id="phase"></div></div>
+      <div id="rightInfo"><div id="kills">🐟 0</div><div id="coinsHud">🪙 0</div></div>
     </div>
     <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar"><div id="bossfill"></div></div></div>
+    <div id="eventTag" class="hidden"></div>
+    <div id="combo" class="hidden"><b id="comboNum">0</b><span>連撃</span></div>
+    <div id="bottomHud">
+      <div id="gaugeWrap" class="meter"><div id="gaugeFill" class="fill"></div><span><b>鰹乱舞</b> <kbd>E</kbd></span></div>
+      <div id="dashWrap" class="meter small"><div id="dashFill" class="fill"></div><span>回避 <kbd>Space</kbd></span></div>
+    </div>
+    <div id="actBtns">
+      <button id="spBtn" aria-label="鰹乱舞"><span class="ring"></span><span class="ic">🐟</span><small>乱舞</small></button>
+      <button id="dashBtn" aria-label="回避"><span class="ring"></span><span class="ic">💨</span><small>回避</small></button>
+    </div>
     <div id="hudBtns">
       <button class="muteBtn" aria-label="サウンド切替">🔊</button>
       <button id="pauseBtn" aria-label="一時停止">⏸</button>
     </div>
     <div id="banner"></div>
   </div>
+  <div id="cutin" class="hidden"><div class="ci-band"><div class="ci-sub"></div><div class="ci-name"></div></div></div>
+  <div id="toasts"></div>
   <div id="joy" class="hidden"><div id="joyKnob"></div></div>
 
   <div id="loading" class="screen"><div class="spinner">🐟</div><p>鰹を水揚げ中…</p></div>
@@ -48,12 +62,84 @@
     <div class="titleBottom">
       <button id="startBtn" class="big">出航する</button>
       <div id="best"></div>
-      <div class="howto">
-        <span class="pc">移動：WASD / 矢印キー　一時停止：Esc　音：M</span>
-        <span class="sp">画面をドラッグして移動</span>
-        <br>攻撃は自動。迫る鯖を叩き、経験値（鱗）を集めて強くなれ。
+      <div class="menuRow">
+        <button class="menuBtn" data-open="shop">🏪<span>購買部</span></button>
+        <button class="menuBtn" data-open="achv">🏆<span>実績</span></button>
+        <button class="menuBtn" data-open="rank">📜<span>番付</span></button>
+        <button class="menuBtn" data-open="codex">📖<span>図鑑</span></button>
+        <button class="menuBtn" data-open="settings">⚙️<span>設定</span></button>
       </div>
-      <button class="muteBtn small" aria-label="サウンド切替">🔊</button>
+      <div class="coinLine">🪙 <b id="titleCoins">0</b> 小判</div>
+      <div class="howto">
+        <span class="pc">移動：WASD / 矢印　回避：Space　鰹乱舞：E　一時停止：Esc（ゲームパッド対応）</span>
+        <span class="sp">ドラッグで移動・右下ボタンで回避／鰹乱舞</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="charsel" class="screen modal hidden">
+    <div class="panel wide">
+      <h2>漁師を選ぶ</h2>
+      <div id="charList" class="grid"></div>
+      <h3>難易度</h3>
+      <div id="diffList" class="row tight"></div>
+      <div class="row">
+        <button id="goBtn" class="big">出航！</button>
+        <button class="ghost back">戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop" class="screen modal hidden">
+    <div class="panel wide">
+      <h2>漁協の購買部</h2>
+      <div class="coinbar">🪙 <b id="shopCoins">0</b> 小判</div>
+      <div id="shopList" class="list"></div>
+      <div class="row"><button class="ghost back">戻る</button></div>
+    </div>
+  </div>
+
+  <div id="achv" class="screen modal hidden">
+    <div class="panel wide">
+      <h2>実績 <small id="achCount"></small></h2>
+      <div id="achList" class="list"></div>
+      <div class="row"><button class="ghost back">戻る</button></div>
+    </div>
+  </div>
+
+  <div id="rank" class="screen modal hidden">
+    <div class="panel wide">
+      <h2>番付</h2>
+      <div id="rankList"></div>
+      <div id="statList"></div>
+      <div class="row"><button class="ghost back">戻る</button></div>
+    </div>
+  </div>
+
+  <div id="codex" class="screen modal hidden">
+    <div class="panel wide">
+      <h2>図鑑</h2>
+      <div id="codexList"></div>
+      <div class="row"><button class="ghost back">戻る</button></div>
+    </div>
+  </div>
+
+  <div id="settings" class="screen modal hidden">
+    <div class="panel">
+      <h2>設定</h2>
+      <div class="setRows">
+        <label>BGM 音量 <input type="range" id="setBgm" min="0" max="1" step="0.05"></label>
+        <label>効果音 音量 <input type="range" id="setSe" min="0" max="1" step="0.05"></label>
+        <label class="chk"><input type="checkbox" id="setShake"> 画面の揺れ</label>
+        <label class="chk"><input type="checkbox" id="setDmg"> ダメージ数値の表示</label>
+        <label>画質
+          <select id="setQuality"><option value="high">高（影あり）</option><option value="low">軽量（影なし）</option></select>
+        </label>
+      </div>
+      <div class="row">
+        <button class="ghost back">閉じる</button>
+        <button id="wipeBtn" class="ghost danger">セーブデータ消去</button>
+      </div>
     </div>
   </div>
 
@@ -61,6 +147,12 @@
     <div class="panel">
       <h2>レベルアップ！ <small>Lv <span id="lvnum">2</span></small></h2>
       <div id="cards"></div>
+      <div id="lvTools" class="row tight">
+        <button id="rerollBtn" class="tool">🎲 リロール <b></b></button>
+        <button id="skipBtn" class="tool">⏭️ スキップ <b></b></button>
+        <button id="banishBtn" class="tool">🚫 封印 <b></b></button>
+      </div>
+      <div id="lvHint"></div>
     </div>
   </div>
 
@@ -68,6 +160,7 @@
     <div class="panel">
       <h2 id="chesttitle">宝箱を手に入れた！</h2>
       <div id="chestlist"></div>
+      <div id="chestCoins"></div>
       <button id="chestOk" class="big">受け取る</button>
     </div>
   </div>
@@ -76,21 +169,26 @@
     <div class="panel">
       <h2>一時停止</h2>
       <div id="pausestats"></div>
+      <div id="evoHints"></div>
       <div class="row">
         <button id="resumeBtn" class="big">再開</button>
-        <button id="quitBtn" class="ghost">タイトルへ</button>
+        <button id="pauseSetBtn" class="ghost">設定</button>
+        <button id="quitBtn" class="ghost">あきらめる</button>
       </div>
     </div>
   </div>
 
   <div id="gameover" class="screen modal hidden">
     <div class="panel">
-      <h2 class="goH">鯖に呑まれた…</h2>
+      <h2 class="goH" id="goH">鯖に呑まれた…</h2>
       <div class="goLabel">生存時間</div>
       <div id="goTime">00:00</div>
       <div id="goRank"></div>
       <div id="goStats"></div>
       <div id="goBest"></div>
+      <div id="goDmg"></div>
+      <div id="goCoins"></div>
+      <div id="goAch"></div>
       <div class="row">
         <button id="retryBtn" class="big">もう一度</button>
         <a id="shareBtn" class="ghost" target="_blank" rel="noopener">𝕏 でシェア</a>

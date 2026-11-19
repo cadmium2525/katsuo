@@ -3,7 +3,7 @@ export class Sound {
   constructor() {
     this.ctx = null;
     this.muted = false;
-    try { this.muted = localStorage.getItem('katsuo_muted') === '1'; } catch (e) { /* noop */ }
+    this.vBgm = 0.7; this.vSe = 0.8;
     this.last = {};
     this.musicOn = false;
     this.intensity = 0;
@@ -19,8 +19,8 @@ export class Sound {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     this.master.connect(comp); comp.connect(ctx.destination);
-    this.sfx = ctx.createGain(); this.sfx.gain.value = 0.55; this.sfx.connect(this.master);
-    this.music = ctx.createGain(); this.music.gain.value = 0.22; this.music.connect(this.master);
+    this.sfx = ctx.createGain(); this.sfx.gain.value = 0.7 * this.vSe; this.sfx.connect(this.master);
+    this.music = ctx.createGain(); this.music.gain.value = 0.3 * this.vBgm; this.music.connect(this.master);
     const len = ctx.sampleRate;
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noise.getChannelData(0);
@@ -29,8 +29,14 @@ export class Sound {
 
   setMuted(m) {
     this.muted = m;
-    try { localStorage.setItem('katsuo_muted', m ? '1' : '0'); } catch (e) { /* noop */ }
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.02);
+  }
+  setVolumes(bgm, se) {
+    this.vBgm = bgm; this.vSe = se;
+    if (this.ctx) {
+      this.music.gain.setTargetAtTime(0.3 * bgm, this.ctx.currentTime, 0.05);
+      this.sfx.gain.setTargetAtTime(0.7 * se, this.ctx.currentTime, 0.05);
+    }
   }
 
   _throttle(name, ms) {
@@ -145,6 +151,79 @@ export class Sound {
       case 'click':
         this._tone(t, 0.05, 900, 900, 'square', 0.06);
         break;
+      case 'dash':
+        { const f = this._noise(t, 0.18, 2400, 1.2, 0.3); f.frequency.exponentialRampToValueAtTime(400, t + 0.16); }
+        this._tone(t, 0.12, 300, 120, 'sine', 0.2);
+        break;
+      case 'special': // 鰹乱舞
+        this._tone(t, 1.2, 70, 40, 'sine', 0.9);
+        { const f = this._noise(t, 1.0, 300, 0.8, 0.5); f.frequency.exponentialRampToValueAtTime(3000, t + 0.9); }
+        [392, 523, 659, 784, 1047].forEach((f, i) => this._tone(t + 0.1 + i * 0.06, 0.5, f, f, 'square', 0.1));
+        break;
+      case 'impact':
+        if (this._throttle(name, 45)) return;
+        this._tone(t, 0.25, 140, 40, 'sine', 0.55);
+        this._noise(t, 0.18, 500, 0.7, 0.35, 'lowpass');
+        break;
+      case 'coin':
+        if (this._throttle(name, 50)) return;
+        this._tone(t, 0.06, 1320, 1320, 'square', 0.07);
+        this._tone(t + 0.05, 0.12, 1760, 1760, 'square', 0.07);
+        break;
+      case 'bomb':
+        this._noise(t, 1.3, 600, 0.5, 0.9, 'lowpass');
+        this._tone(t, 1.0, 90, 25, 'sine', 0.9);
+        break;
+      case 'freeze':
+        [2093, 1760, 1568, 1319, 1047].forEach((f, i) => this._tone(t + i * 0.05, 0.4, f, f, 'sine', 0.12));
+        break;
+      case 'evolve':
+        [262, 330, 392, 523, 659, 784, 1047, 1319].forEach((f, i) => this._tone(t + i * 0.07, 0.6, f, f * 1.01, 'triangle', 0.18));
+        this._noise(t + 0.5, 0.8, 6000, 1, 0.1, 'highpass');
+        break;
+      case 'ach':
+        [784, 988, 1175, 1568].forEach((f, i) => this._tone(t + i * 0.09, 0.35, f, f, 'triangle', 0.16));
+        break;
+      case 'thunder':
+        this._noise(t, 0.06, 5000, 0.5, 0.6, 'highpass');
+        this._noise(t + 0.03, 1.1, 250, 0.4, 0.9, 'lowpass');
+        break;
+      case 'gull':
+        if (this._throttle(name, 350)) return;
+        this._tone(t, 0.12, 1900, 1300, 'sine', 0.08);
+        this._tone(t + 0.13, 0.12, 1800, 1200, 'sine', 0.06);
+        break;
+      case 'hook':
+        if (this._throttle(name, 70)) return;
+        this._tone(t, 0.12, 500, 1600, 'sine', 0.12);
+        break;
+      case 'knife':
+        if (this._throttle(name, 70)) return;
+        this._noise(t, 0.06, 6000, 2, 0.15, 'highpass');
+        break;
+      case 'combo':
+        [880, 1175, 1568].forEach((f, i) => this._tone(t + i * 0.05, 0.15, f, f, 'square', 0.08));
+        break;
+      case 'revive':
+        [262, 392, 523, 784, 1047].forEach((f, i) => this._tone(t + i * 0.1, 0.5, f, f, 'triangle', 0.2));
+        break;
+      case 'buy':
+        this._tone(t, 0.08, 1320, 1320, 'square', 0.08);
+        [1568, 2093].forEach((f, i) => this._tone(t + 0.07 + i * 0.07, 0.2, f, f, 'triangle', 0.12));
+        break;
+      case 'error':
+        this._tone(t, 0.18, 140, 120, 'sawtooth', 0.15);
+        break;
+      case 'reroll':
+        for (let i = 0; i < 5; i++) this._tone(t + i * 0.03, 0.04, 600 + i * 150, 600 + i * 150, 'square', 0.05);
+        break;
+      case 'roulette':
+        if (this._throttle(name, 60)) return;
+        this._tone(t, 0.03, 1200, 1200, 'square', 0.04);
+        break;
+      case 'night':
+        [523, 392, 330].forEach((f, i) => this._tone(t + i * 0.2, 0.6, f, f, 'sine', 0.1));
+        break;
     }
   }
 
@@ -196,6 +275,7 @@ export class Sound {
   }
   _playStep(step, t) {
     if (this.muted) return;
+    this.tempo = this.intensity >= 2 ? 164 : this.intensity ? 146 : 138;
     const s16 = step % 16, bar = Math.floor(step / 16);
     const mus = this.music;
     // 太鼓
@@ -205,6 +285,7 @@ export class Sound {
     }
     // 締太鼓
     if (s16 === 4 || s16 === 12 || (this.intensity && s16 % 2 === 1)) this._noise(t, 0.06, 2200, 3, 0.35, 'bandpass', mus);
+    if (this.intensity >= 2 && s16 % 4 === 2) this._tone(t, 0.2, 100, 50, 'sine', 0.6, mus, 0.002);
     // 鉦
     if (s16 % 4 === 2) this._tone(t, 0.08, 2600, 2550, 'square', 0.05, mus, 0.001);
     // ベース

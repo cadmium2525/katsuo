@@ -444,9 +444,9 @@ function katsuoGeometries() {
 }
 
 // 鰹モデル：尾柄（握り）を原点、吻端が +Z 方向
-export function buildKatsuo(mats, length = 1.8, grip = 0.97, gripOffset = 0) {
+// 指定サイズ・握り位置に変換した鰹のジオメトリ一式（インスタンス描画にも使う）
+export function katsuoGeos(length = 1.8, grip = 0.97, gripOffset = 0) {
   const geos = katsuoGeometries();
-  const group = new THREE.Group();
   const xf = g => {
     const c = g.clone();
     c.scale(length, length, length);
@@ -454,10 +454,16 @@ export function buildKatsuo(mats, length = 1.8, grip = 0.97, gripOffset = 0) {
     c.translate(0, 0, (grip - 0.5) * length + gripOffset);
     return c;
   };
-  const body = new THREE.Mesh(xf(geos.body), mats.body);
-  const fins = new THREE.Mesh(xf(geos.fins), mats.fin);
-  const iris = new THREE.Mesh(xf(geos.iris), mats.iris);
-  const pupil = new THREE.Mesh(xf(geos.pupil), mats.pupil);
+  return { body: xf(geos.body), fins: xf(geos.fins), iris: xf(geos.iris), pupil: xf(geos.pupil) };
+}
+
+export function buildKatsuo(mats, length = 1.8, grip = 0.97, gripOffset = 0) {
+  const g = katsuoGeos(length, grip, gripOffset);
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(g.body, mats.body);
+  const fins = new THREE.Mesh(g.fins, mats.fin);
+  const iris = new THREE.Mesh(g.iris, mats.iris);
+  const pupil = new THREE.Mesh(g.pupil, mats.pupil);
   for (const m of [body, fins, iris, pupil]) { m.castShadow = true; group.add(m); }
   group.userData.length = length;
   return group;
@@ -566,5 +572,66 @@ export function makeCanMaterials() {
   return [
     new THREE.MeshStandardMaterial({ map: makeCanLabelTexture(), metalness: 0.25, roughness: 0.4 }),
     lid, lid,
+  ];
+}
+
+// バッテラ（鯖の押し寿司）：酢飯＋しめ鯖＋白板昆布
+export function batteraGeometry() {
+  const rice = new THREE.BoxGeometry(0.5, 0.3, 1.0, 3, 2, 6);
+  const top = new THREE.BoxGeometry(0.52, 0.07, 1.02); top.translate(0, 0.185, 0);
+  const kombu = new THREE.BoxGeometry(0.44, 0.015, 0.94); kombu.translate(0, 0.228, 0);
+  const m = mergeGeos([rice, top, kombu]);
+  const a = rice.index.count, b = top.index.count, c = kombu.index.count;
+  m.addGroup(0, a, 0); m.addGroup(a, b, 1); m.addGroup(a + b, c, 2);
+  m.computeBoundingSphere();
+  return m;
+}
+export function makeBatteraMaterials() {
+  const c = makeCanvas(128, 128), ctx = c.getContext('2d');
+  ctx.fillStyle = '#f4efe2'; ctx.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 260; i++) {
+    const x = Math.random() * 128, y = Math.random() * 128;
+    ctx.fillStyle = `rgba(${200 + Math.random() * 40 | 0},${195 + Math.random() * 40 | 0},${180 + Math.random() * 30 | 0},0.9)`;
+    ctx.beginPath(); ctx.ellipse(x, y, 4, 2.2, Math.random() * 3, 0, Math.PI * 2); ctx.fill();
+  }
+  return [
+    new THREE.MeshStandardMaterial({ map: canvasTex(c), roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ map: makeSabaTexture('shime', 256, 128), metalness: 0.3, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: 0xc8d890, roughness: 0.2, transparent: true, opacity: 0.75 }),
+  ];
+}
+
+// 壊せる樽（アイテム入り）
+export function taruGeometry() {
+  const pts = [];
+  for (let i = 0; i <= 10; i++) {
+    const y = i / 10;
+    pts.push(new THREE.Vector2(0.34 + Math.sin(y * Math.PI) * 0.07, y * 0.9));
+  }
+  const body = new THREE.LatheGeometry(pts, 14);
+  const lid = new THREE.CircleGeometry(0.34, 14); lid.rotateX(-Math.PI / 2); lid.translate(0, 0.9, 0);
+  const bands = [0.18, 0.72].map(y => {
+    const t = new THREE.TorusGeometry(0.4 + Math.sin(y / 0.9 * Math.PI) * 0.06, 0.025, 4, 18);
+    t.rotateX(Math.PI / 2); t.translate(0, y, 0); return t;
+  });
+  const wood = mergeGeos([body, lid]);
+  const band = mergeGeos(bands);
+  const m = mergeGeos([wood, band]);
+  m.addGroup(0, wood.index.count, 0); m.addGroup(wood.index.count, band.index.count, 1);
+  m.computeBoundingSphere();
+  return m;
+}
+export function makeTaruMaterials() {
+  const c = makeCanvas(128, 64), ctx = c.getContext('2d');
+  ctx.fillStyle = '#9a6a3a'; ctx.fillRect(0, 0, 128, 64);
+  for (let x = 0; x < 128; x += 11) {
+    ctx.fillStyle = `rgba(${120 + Math.random() * 40 | 0},${80 + Math.random() * 30 | 0},40,0.5)`; ctx.fillRect(x, 0, 10, 64);
+    ctx.fillStyle = 'rgba(50,30,10,0.6)'; ctx.fillRect(x + 10, 0, 1, 64);
+  }
+  ctx.fillStyle = '#c62828'; ctx.font = 'bold 26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('大漁', 64, 34);
+  return [
+    new THREE.MeshStandardMaterial({ map: canvasTex(c), roughness: 0.8 }),
+    new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.7, roughness: 0.4 }),
   ];
 }
