@@ -2430,7 +2430,7 @@ function simulateInner(dt) {
 function syncScene(dt, t) {
   player.position.set(P.x, 0, P.z);
   player.rotation.y = P.facing;
-  player.visible = !(P.hurtT > 0 && Math.sin(t * 50) > 0.3);
+  player.visible = G.state === 'over' || !(P.hurtT > 0 && Math.sin(t * 50) > 0.3);
   katsuoPivot.position.set(P.x, 1.3, P.z);
   katsuoPivot.rotation.set(TK.pitch, TK.yaw, 0);
   katsuo.rotation.z = TK.swinging ? Math.sin(t * 40) * 0.12 : Math.sin(t * 3) * 0.05;
@@ -3072,11 +3072,98 @@ function gameOver() {
   $('goCoins').textContent = `🪙 小判 +${earned}（拾った ${G.coins} ＋ 生存ボーナス ${timeBonus}）`;
   $('goAch').innerHTML = G.newAch.length ? '🏆 ' + G.newAch.map(a => a.name).join('・') : '';
   const text = `「カツオのたたきサバイバー」で鯖の猛攻を ${fmtTime(G.time)} 生き延びた！（撃破 ${fmtNum(G.kills)}・最大ダメージ ${fmtNum(G.maxDmg)}・称号「${rankOf(G.time)}」） #カツオのたたきサバイバー`;
-  $('shareBtn').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(location.href.split(/[?#]/)[0])}`;
+  G.shareText = `${text}\n${location.href.split(/[?#]/)[0]}`;
+  G.shareFile = null;
+  G.wantShot = true; // 次の描画で最後の瞬間を撮影して結果画像を作る
   setTimeout(() => { $('gameover').classList.remove('hidden'); $('retryBtn').focus(); }, 900);
   $('hud').classList.add('hidden');
   joy.active = false; joyEl.classList.add('hidden');
 }
+
+// ================================================================ 結果画像のシェア
+const SHARE_W = 1200, SHARE_H = 630;
+function captureResult() {
+  // 描画直後のゲーム画面（と数字のオーバーレイ）を右側に敷く
+  const shot = document.createElement('canvas');
+  shot.width = SHARE_W; shot.height = SHARE_H;
+  const ctx = shot.getContext('2d');
+  ctx.fillStyle = '#0a1626'; ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+  const rx = 380, rw = SHARE_W - rx;
+  const s = Math.max(rw / canvas.width, SHARE_H / canvas.height);
+  const dw = canvas.width * s, dh = canvas.height * s, dx = rx + (rw - dw) / 2, dy = (SHARE_H - dh) / 2;
+  try {
+    ctx.drawImage(canvas, dx, dy, dw, dh);
+    ctx.drawImage(fx, dx, dy, dw, dh);
+  } catch (e) { /* noop */ }
+  G.shareShot = shot;
+  try { G.shareFile = canvasToFile(makeShareCanvas()); } catch (e) { G.shareFile = null; }
+}
+function makeShareCanvas() {
+  const c = document.createElement('canvas');
+  c.width = SHARE_W; c.height = SHARE_H;
+  const ctx = c.getContext('2d');
+  if (G.shareShot) ctx.drawImage(G.shareShot, 0, 0);
+  else { ctx.fillStyle = '#0a1626'; ctx.fillRect(0, 0, SHARE_W, SHARE_H); }
+  const g = ctx.createLinearGradient(0, 0, SHARE_W, 0);
+  g.addColorStop(0, 'rgba(6,14,32,0.96)'); g.addColorStop(0.45, 'rgba(6,14,32,0.82)'); g.addColorStop(0.75, 'rgba(6,14,32,0.2)'); g.addColorStop(1, 'rgba(6,14,32,0.05)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+  ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = 10; ctx.strokeRect(5, 5, SHARE_W - 10, SHARE_H - 10);
+  const TITLE = '"Dela Gothic One", "Hiragino Sans", sans-serif', BODY = '"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", sans-serif';
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  const text = (str, x, y, font, color, stroke = 0) => {
+    ctx.font = font;
+    if (stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = stroke; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(str, x, y); }
+    ctx.fillStyle = color; ctx.fillText(str, x, y);
+    return ctx.measureText(str).width;
+  };
+  const X = 60;
+  // タイトル
+  let x = X;
+  x += text('カツオの', x, 92, `400 44px ${TITLE}`, '#ffffff', 8);
+  x += text('たたき', x, 92, `400 44px ${TITLE}`, '#e2402e', 8);
+  text('サバイバー', x, 92, `400 44px ${TITLE}`, '#ffcf3a', 8);
+  // 生存時間
+  text(G.kamiDone ? '👑 鯖神を〆た！ 生存時間' : '生存時間', X, 165, `800 30px ${BODY}`, '#bfe2ff', 6);
+  text(fmtTime(G.time), X - 4, 310, `400 150px ${TITLE}`, '#ffffff', 14);
+  text(`称号：${rankOf(G.time)}`, X, 378, `900 40px ${BODY}`, '#ffcf3a', 8);
+  text(`撃破 ${fmtNum(G.kills)}　Lv ${G.level}　最大連撃 ${fmtNum(G.maxCombo)}`, X, 442, `800 30px ${BODY}`, '#ffffff', 6);
+  text(`最大ダメージ ${fmtNum(G.maxDmg)}`, X, 488, `800 30px ${BODY}`, '#ffffff', 6);
+  text(`${CHAR.icon} ${CHAR.name}　${DIFF.icon} ${DIFF.name}`, X, 534, `800 28px ${BODY}`, '#9fe8ff', 6);
+  text('#カツオのたたきサバイバー', X, 596, `800 24px ${BODY}`, '#ffd27a', 5);
+  return c;
+}
+function canvasToFile(c) {
+  const data = c.toDataURL('image/png');
+  const bin = atob(data.split(',')[1]);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const t = Math.floor(G.time);
+  return new File([arr], `katsuo-survivor-${String(Math.floor(t / 60)).padStart(2, '0')}m${String(t % 60).padStart(2, '0')}s.png`, { type: 'image/png' });
+}
+function downloadFile(file) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+async function shareResult() {
+  sound.play('click');
+  if (!G.shareFile) { try { G.shareFile = canvasToFile(makeShareCanvas()); } catch (e) { G.shareFile = null; } }
+  const file = G.shareFile, text = G.shareText || '';
+  // 投稿先アプリが本文を受け取らない場合に備えて、本文もコピーしておく
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => { /* noop */ });
+  const data = file ? { files: [file], text } : { text };
+  if (navigator.share && (!navigator.canShare || navigator.canShare(data)) && file) {
+    try { await navigator.share(data); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  // 画像付きの共有ができない環境：画像を保存して本文をコピー
+  if (file) downloadFile(file);
+  toast('📸 結果画像を保存し、投稿文をコピーしました。<br>X などに画像を添付して貼り付けてね', 'tip');
+}
+$('shareBtn').onclick = shareResult;
 
 // ================================================================ タイトル・メニュー
 function blurUi() { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); }
@@ -3357,6 +3444,7 @@ function frame(now) {
   syncScene(vdt, simTime);
   renderer.render(scene, camera);
   drawFx(G.state === 'play' || G.state === 'over' ? sdt : 0);
+  if (G.wantShot) { G.wantShot = false; captureResult(); }
   if (G.state !== 'over') updateHud();
 }
 
